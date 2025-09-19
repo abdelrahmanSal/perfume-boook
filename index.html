@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Perfume Polls</title>
+<style>
+  body { font-family: Arial, sans-serif; padding: 20px; background: #f0f8ff; }
+  h1 { color: #008cba; }
+  .poll { border: 1px solid #ccc; padding: 15px; margin-bottom: 15px; border-radius: 8px; background: #fff; }
+  .option { margin-left: 20px; cursor: pointer; color: #333; }
+  .option:hover { text-decoration: underline; }
+  .comments { margin-top: 10px; font-size: 0.9em; color: #555; }
+  input, button { padding: 5px; margin: 5px 0; }
+</style>
+</head>
+<body>
+
+<h1>Perfume Polls</h1>
+
+<h2>Create New Poll</h2>
+<input type="text" id="pollTitle" placeholder="Poll title">
+<input type="text" id="pollUser" placeholder="Your name">
+<button onclick="createPoll()">Create Poll</button>
+
+<h2>All Polls</h2>
+<div id="pollsContainer"></div>
+
+<script>
+const API_URL = "https://polls-lx6zfqm9z-abdelrahmans-projects-80b7b8a4.vercel.app";
+
+// Fetch and display all polls
+async function loadPolls() {
+  const res = await fetch(API_URL + "/polls");
+  const polls = await res.json();
+  const container = document.getElementById("pollsContainer");
+  container.innerHTML = "";
+
+  polls.forEach(poll => {
+    const pollDiv = document.createElement("div");
+    pollDiv.className = "poll";
+    pollDiv.innerHTML = `<h3>${poll.title} (created by ${poll.createdBy})</h3>`;
+
+    // Options
+    const optionsDiv = document.createElement("div");
+    poll.options.forEach(opt => {
+      const optDiv = document.createElement("div");
+      optDiv.className = "option";
+      optDiv.textContent = `${opt.text} - Votes: ${opt.votes}`;
+      optDiv.onclick = () => voteOption(poll.id, opt.id);
+      optionsDiv.appendChild(optDiv);
+    });
+    pollDiv.appendChild(optionsDiv);
+
+    // Add new option
+    const newOptionInput = document.createElement("input");
+    newOptionInput.placeholder = "Add option";
+    const addOptionBtn = document.createElement("button");
+    addOptionBtn.textContent = "Add";
+    addOptionBtn.onclick = () => addOption(poll.id, newOptionInput.value);
+    pollDiv.appendChild(newOptionInput);
+    pollDiv.appendChild(addOptionBtn);
+
+    // Comments
+    const commentsDiv = document.createElement("div");
+    commentsDiv.className = "comments";
+    commentsDiv.innerHTML = "<strong>Comments:</strong><br>";
+    poll.comments.forEach(c => {
+      commentsDiv.innerHTML += `${c.name}: ${c.message}<br>`;
+    });
+    pollDiv.appendChild(commentsDiv);
+
+    // Add comment
+    const commentName = document.createElement("input");
+    commentName.placeholder = "Your name";
+    const commentMsg = document.createElement("input");
+    commentMsg.placeholder = "Comment";
+    const commentBtn = document.createElement("button");
+    commentBtn.textContent = "Add Comment";
+    commentBtn.onclick = () => addComment(poll.id, commentName.value, commentMsg.value);
+    pollDiv.appendChild(commentName);
+    pollDiv.appendChild(commentMsg);
+    pollDiv.appendChild(commentBtn);
+
+    container.appendChild(pollDiv);
+  });
+}
+
+// Create a new poll
+async function createPoll() {
+  const title = document.getElementById("pollTitle").value;
+  const user = document.getElementById("pollUser").value;
+  if (!title || !user) return alert("Please enter poll title and your name");
+  await fetch(API_URL + "/polls", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ title, createdBy: user })
+  });
+  document.getElementById("pollTitle").value = "";
+  loadPolls();
+}
+
+// Add option
+async function addOption(pollId, optionText) {
+  if (!optionText) return alert("Enter option text");
+  await fetch(`${API_URL}/polls/${pollId}/options`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ optionText })
+  });
+  loadPolls();
+}
+
+// Vote for an option
+async function voteOption(pollId, optionId) {
+  await fetch(`${API_URL}/polls/${pollId}/vote/${optionId}`, { method: "POST" });
+  loadPolls();
+}
+
+// Add comment
+async function addComment(pollId, name, message) {
+  if (!name || !message) return alert("Enter name and comment");
+  await fetch(`${API_URL}/polls/${pollId}/comments`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, message })
+  });
+  loadPolls();
+}
+
+// Initial load
+loadPolls();
+</script>
+</body>
+</html>
